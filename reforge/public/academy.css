@@ -148,3 +148,5 @@ form .feedback:not(:empty) { margin-bottom: 0.85rem; }
   .stats dd { font-size: 1.3rem; }
   .management-row { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
 }
+
+.hero .catalog-totals { font-size: 1rem; font-weight: 750; }

@@ -1,38 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 SubLang International <https://sublang.ai>
 
-import { createHmac, timingSafeEqual } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
 const videoName = /^[a-z0-9][a-z0-9-]{0,80}\.mp4$/;
-
-export function canPlay(user, course) {
-  return Boolean(user && course?.published);
-}
-
-function signature(db, id, expiresAt) {
-  const { value } = db.prepare("SELECT value FROM settings WHERE key = 'playback_key'").get();
-  return createHmac('sha256', Buffer.from(value, 'hex'))
-    .update(`${id}:${expiresAt}`).digest('hex');
-}
-
-export function issuePlayback(db, id) {
-  const expiresAt = Date.now() + 60_000;
-  return { url: `/media/${id}?expires=${expiresAt}&signature=${signature(db, id, expiresAt)}`, expiresAt };
-}
-
-export function playbackStatus(db, id, query) {
-  const expires = query.get('expires');
-  const supplied = query.get('signature');
-  if (query.getAll('expires').length !== 1 || query.getAll('signature').length !== 1 ||
-      !/^\d{1,15}$/.test(expires) || !/^[a-f0-9]{64}$/.test(supplied)) return 403;
-  const expected = signature(db, id, expires);
-  if (!timingSafeEqual(Buffer.from(supplied, 'hex'), Buffer.from(expected, 'hex'))) return 403;
-  return Number(expires) <= Date.now() ? 410 : 200;
-}
 
 function isWithin(root, path) {
   const local = relative(root, path);

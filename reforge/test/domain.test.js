@@ -255,6 +255,24 @@ test('course catalog and management preserve public shape, validate writes, and 
   db.prepare('DELETE FROM courses WHERE id = ?').run(course.id);
 });
 
+test('course-access-18：课程页面与签发入口的资格矩阵', async () => {
+  const { cookie: student } = await login('student');
+  const { cookie: admin } = await login('admin');
+  for (const Cookie of [undefined, student, admin]) {
+    const headers = Cookie ? { Cookie } : {};
+    for (const [id, publicStatus, signedInIssue] of [[1, 200, 200], [4, 404, 404], [999, 404, 404], ['01', 404, 404]]) {
+      const page = await http(`/courses/${id}`, { headers });
+      assert.equal(page.status, publicStatus);
+      assert.equal(page.text.includes('开始观看'), Boolean(Cookie && publicStatus === 200));
+      assert.equal(page.text.includes('登录后观看'), Boolean(!Cookie && publicStatus === 200));
+      assert.doesNotMatch(page.text, /\/media\/\d+\?/);
+      const issued = await api(`/api/courses/${id}/play`, 'POST', {}, headers);
+      assert.equal(issued.status, Cookie || id === '01' ? signedInIssue : 401);
+      assert.equal('url' in issued.json(), Boolean(Cookie && signedInIssue === 200));
+    }
+  }
+});
+
 test('signed playback eligibility, expiry, byte serving, and media isolation', async () => {
   const play = (id, headers) => api(`/api/courses/${id}/play`, 'POST', {}, headers);
   assert.equal((await play('01')).status, 404);

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2026 SubLang International <https://sublang.ai>
-"""通过浏览器验收学堂。请在独立示例库运行，管理流程会留下一个草稿。"""
+"""通过浏览器验收学堂。请在独立示例库运行，管理流程会创建并下架测试课程。"""
 
 import argparse
 import json
@@ -236,7 +236,7 @@ def check_published_editor(page, base, evidence):
         editor = page.url
         publish = page.get_by_role("checkbox", name=re.compile("发布|上架"))
         expect(publish).to_be_checked()
-        preview = action(page, "在目录中查看|预览|查看.*课程|查看.*详情|查看.*公开")
+        preview = action(page, "在目录中查看|预览|查看.*课程|查看.*详情|查看.*公开|公开详情")
         preview.click()
         page.wait_for_url(detail)
         page.go_back()

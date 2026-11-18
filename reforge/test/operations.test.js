@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 SubLang International <https://sublang.ai>
 
 import assert from 'node:assert/strict';
-import { execFile, spawn } from 'node:child_process';
+import { execFile, spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import {
   cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync,
@@ -23,6 +23,48 @@ const courseVideos = [
   ['git-essentials.mp4', 20, 1],
   ['web-api-testing.mp4', 22, 1],
   ['sqlite-modeling.mp4', 16, 0],
+];
+
+const expectedExamples = [
+  [
+    'Python 入门：写出第一个程序',
+    '从变量、条件和循环开始，用一个猜数字小游戏把基础语法串起来。',
+    [
+      '这门课面向从没写过代码的同学。我们先装好 Python，再一步步写出一个能和你对话的猜数字游戏。',
+      '每一节都先演示、再动手：你会认识变量与类型、if 判断、while 循环和函数，并学会读懂报错信息。',
+      '学完后，你能独立写出几十行的小程序，并知道下一步该学什么。',
+    ].join('\n\n'),
+    '林知远', 'beginner', 'python-basics.mp4', 18,
+  ],
+  [
+    '用 Git 管好每一次修改',
+    '提交、分支与合并：在团队里放心地改代码，出错也能找回来。',
+    [
+      '把 Git 当成代码的“时光机”。课程从第一次提交讲起，覆盖查看历史、撤销修改、创建分支和合并冲突。',
+      '我们用一个多人协作的小项目演示常见场景：两个人改了同一行怎么办？提交写错了怎么补救？',
+      '课程最后整理一份团队提交约定，可以直接用到你的项目里。',
+    ].join('\n\n'),
+    '周若溪', 'beginner', 'git-essentials.mp4', 20,
+  ],
+  [
+    'Web 接口设计与测试',
+    '用 HTTP 工具直接调用接口，读懂状态码，写出可重复执行的接口测试。',
+    [
+      '页面背后是一组 HTTP 接口。本课教你用 curl 和浏览器开发者工具观察请求与响应，理解方法、路径、状态码和 JSON 结构。',
+      '接着我们设计一组课程接口：哪些需要登录、出错时返回什么、怎样避免越权访问。',
+      '最后把这些约定写成自动化测试，每次修改后一条命令就能确认接口仍然正确。',
+    ].join('\n\n'),
+    '陈墨', 'intermediate', 'web-api-testing.mp4', 22,
+  ],
+  [
+    'SQLite 数据建模实践',
+    '从需求出发设计表结构，用迁移脚本安全地演进数据库。',
+    [
+      '这门课还在准备中，供管理员练习发布流程。',
+      '内容涵盖表与字段设计、约束与索引、编写迁移脚本，以及迁移前后如何备份与核对数据。',
+    ].join('\n\n'),
+    '许清', 'intermediate', 'sqlite-modeling.mp4', 16,
+  ],
 ];
 
 function fixture(t, overrides = {}) {
@@ -146,10 +188,12 @@ test('operations-19：本机启动、互斥、异常重启及幂等示例', asyn
   const settings = local.inspect(db => {
     assert.deepEqual(db.prepare('SELECT video_file, duration_seconds, published FROM courses ORDER BY id').all()
       .map(row => Object.values(row)), courseVideos);
+    assert.deepEqual(db.prepare('SELECT title, summary, description, instructor, level, video_file, duration_seconds FROM courses ORDER BY id')
+      .all().map(row => Object.values(row)), expectedExamples);
     const rows = db.prepare('SELECT key, value FROM settings ORDER BY key').all();
     assert.ok(rows.length >= 2);
     assert.ok(rows.some(row => /^[0-9a-f]{64,}$/i.test(row.value)));
-    db.exec("UPDATE courses SET title = '保留已修改的课程' WHERE id = 1");
+    db.exec("UPDATE courses SET title = '保留已修改的课程', instructor = '本地讲师', level = 'advanced', summary = '本地简介', description = '本地正文' WHERE id = 1");
     return rows;
   });
 
@@ -174,7 +218,8 @@ test('operations-19：本机启动、互斥、异常重启及幂等示例', asyn
   assert.equal(existsSync(local.runPath), false);
   local.inspect(db => {
     assert.deepEqual(db.prepare('SELECT key, value FROM settings ORDER BY key').all(), settings);
-    assert.equal(db.prepare('SELECT title FROM courses WHERE id = 1').get().title, '保留已修改的课程');
+    assert.deepEqual(Object.values(db.prepare('SELECT title, instructor, level, summary, description FROM courses WHERE id = 1').get()),
+      ['保留已修改的课程', '本地讲师', 'advanced', '本地简介', '本地正文']);
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM users').get().n, 3);
   });
 });
@@ -324,7 +369,14 @@ test('operations-21：维护令牌、备份锁定与恢复真实数据库', asyn
   for (const suffix of ['-wal', '-shm', '-journal']) assert.equal(existsSync(local.dbPath + suffix), false);
 });
 
-test('operations-22：生成的示例素材可解码并与课程一致', { timeout: 90_000 }, async t => {
+const ffmpegEncoders = spawnSync('ffmpeg', ['-hide_banner', '-encoders'], { encoding: 'utf8' });
+const pillowReady = spawnSync('python3', ['-c', 'from PIL import ImageFont; ImageFont.load_default(size=20)'], { stdio: 'ignore' });
+const mediaToolsReady = ffmpegEncoders.status === 0 && /\blibx264\b/.test(ffmpegEncoders.stdout) && pillowReady.status === 0;
+
+test('operations-22：生成的示例素材可解码并与课程一致', {
+  timeout: 90_000,
+  skip: mediaToolsReady ? false : '此验证需要含 libx264 的 ffmpeg 和支持可缩放默认字体的 Python Pillow。',
+}, async t => {
   const local = fixture(t);
   await execute('./scripts/make-media.sh', [], { cwd: local.cwd, timeout: 80_000 });
   const service = await local.start();

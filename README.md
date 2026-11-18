@@ -56,3 +56,28 @@ npm start
 | --- | --- |
 | `start` | 可运行的学堂，没有 `specs/`，第一天从初始化规约开始 |
 | `specs-ready` | 与 `start` 代码相同，另含观看功能的基座规约 |
+
+## 从完整规约重铸的学堂
+
+本分支以 `baseline-specs` 的全量规约 `cb7c3a4` 为起点。项目根目录运行原程序，`reforge/` 运行 GPT-6.2 Sol 独立生成的程序。两份程序使用独立数据库，共用 `media/` 的课程视频。
+
+在不同终端运行以下两个命令，再分别访问 3100、3101 端口。要运行会创建课程的验收，请使用全新的临时数据目录。
+
+```sh
+DATA_DIR="$(mktemp -d)" PORT=3100 npm start
+DATA_DIR="$(mktemp -d)" PORT=3101 npm --prefix reforge start
+```
+
+可在同一浏览器分别体验登录、课程管理和观看。也可从仓库根目录执行独立对照：
+
+```sh
+python3 experiments/browser-acceptance.py http://127.0.0.1:3100 /tmp/reference.json
+python3 experiments/browser-acceptance.py http://127.0.0.1:3101 /tmp/candidate.json
+python3 experiments/compare-seed.py http://127.0.0.1:3100 http://127.0.0.1:3101
+python3 experiments/playback-expiry.py http://127.0.0.1:3101 /tmp/expiry.json
+python3 experiments/operations-acceptance.py reforge
+npm test
+npm --prefix reforge test
+```
+
+浏览器脚本使用 Python Playwright 和 Chromium。初始资料、授权到期与运维对照脚本使用 Python 标准库。到期对照实际等待 60 秒，运维对照在自己的临时副本中运行。重铸程序可通过 `npm --prefix reforge run backup` 等命令管理自己的数据。

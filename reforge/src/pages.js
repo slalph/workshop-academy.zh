@@ -9,11 +9,11 @@ const localDate = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium' });
 const localTime = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' });
 const levels = { beginner: '入门', intermediate: '进阶', advanced: '高级' };
 
-const duration = seconds => {
+const duration = (seconds, includeMinutes = false) => {
   const whole = Math.max(0, Math.floor(Number(seconds) || 0));
   const hours = Math.floor(whole / 3600);
   const minutes = Math.floor(whole / 60) % 60;
-  return `${hours ? `${hours} 小时 ` : ''}${minutes ? `${minutes} 分 ` : ''}${whole % 60} 秒`;
+  return `${hours ? `${hours} 小时 ` : ''}${minutes || hours || includeMinutes ? `${minutes} 分 ` : ''}${whole % 60} 秒`;
 };
 
 
@@ -24,7 +24,7 @@ function shell({ title, user, pathname, content }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escape(title)} · 学堂</title>
+<title>${escape(title)} · 学堂在线</title>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/academy.css">
 <script src="/assets/academy.js" defer></script>
@@ -33,7 +33,7 @@ function shell({ title, user, pathname, content }) {
 <a class="skip-link" href="#main-content">跳到主要内容</a>
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand" href="/" aria-label="学堂首页"><img src="/assets/favicon.svg" alt="" width="32" height="32">学堂</a>
+    <a class="brand" href="/" aria-label="学堂在线首页"><img src="/assets/favicon.svg" alt="" width="32" height="32">学堂在线</a>
     <nav aria-label="主导航">
       <a href="/" ${pathname === '/' ? 'aria-current="page"' : ''}>首页</a>
       <a href="/#courses">课程目录</a>
@@ -47,29 +47,28 @@ function shell({ title, user, pathname, content }) {
   <div class="container feedback" id="site-feedback" role="alert"></div>
 </header>
 <main id="main-content" class="container main" tabindex="-1">${content}</main>
-<footer class="site-footer"><div class="container"><span>学堂</span><a href="/#courses">课程目录</a></div></footer>
+<footer class="site-footer"><div class="container"><span>学堂在线</span><a href="/#courses">课程目录</a></div></footer>
 </body>
 </html>`;
 }
 
 function catalog(courses, user) {
-  const published = courses.filter(course => course.published);
-  const seconds = published.reduce((total, course) => total + course.durationSeconds, 0);
+  const seconds = courses.reduce((total, course) => total + course.durationSeconds, 0);
   return `<section class="hero">
     <div class="hero-copy">
-      <h1>学堂</h1>
-      <p>浏览课程目录，按自己的节奏学习。</p>
+      <h1>学堂在线</h1>
+      <p>边看边做，把想法变成作品。</p>
+      <p class="catalog-totals">${courses.length} 门课程 <span aria-hidden="true">·</span> 总时长 ${duration(seconds, true)}</p>
       <div class="actions"><a class="button" href="#courses">浏览课程</a>
         ${user ? '' : '<a class="button secondary" href="/login">登录学堂</a>'}</div>
     </div>
-    <img class="hero-art" src="/assets/library.svg" alt="" width="420" height="208">
+    <img class="hero-art" src="/assets/library.svg" alt="紫色像素风格的本地视频播放器" width="420" height="208">
   </section>
   <section id="courses" class="board" aria-labelledby="courses-title">
     <div class="section-heading">
       <h2 id="courses-title">课程目录</h2>
-      <p class="muted">${published.length} 门课程 <span aria-hidden="true">·</span> 总时长 ${duration(seconds)}</p>
     </div>
-    ${published.length ? `<ul class="course-grid">${published.map(course => `
+    ${courses.length ? `<ul class="course-grid">${courses.map(course => `
       <li><a class="course-card" href="/courses/${course.id}">
         <img src="/covers/${course.id}.svg" alt="" width="480" height="270">
         <div class="card-content">
@@ -144,7 +143,8 @@ function adminList(courses, url) {
   const change = url.searchParams.get('change');
   const updated = courses.find(course => String(course.id) === url.searchParams.get('course'));
   const confirmation = (change === 'created' || change === 'updated') && updated ?
-    `已${change === 'created' ? '创建' : '更新'}课程「${escape(updated.title)}」。` : '';
+    `已${change === 'created' ? '创建' : '更新'}课程「${escape(updated.title)}」。${updated.published ?
+      '课程已发布，访客可在公开目录查看。' : '课程为草稿，访客无法在公开目录查看。'}` : '';
   return `<header class="page-heading split"><div><h1>课程管理</h1></div>
     <a class="button" href="/admin/courses/new">新建课程</a></header>
   <dl class="stats"><div><dt>全部课程</dt><dd data-count="all">${courses.length}</dd></div>
@@ -154,7 +154,8 @@ function adminList(courses, url) {
   ${courses.length ? `<ul class="management-list">${courses.map(course => `
     <li class="management-row" data-course-id="${course.id}" data-published="${course.published}">
       <div><p class="muted">课程 #${course.id}</p><h2>${escape(course.title)}</h2>
-        <p class="muted">${escape(course.instructor)} · ${escape(course.levelLabel)} · ${duration(course.durationSeconds)}</p></div>
+        <p class="muted">${escape(course.instructor)} · ${escape(course.levelLabel)} · ${duration(course.durationSeconds)}</p>
+        <p class="muted">本地视频 <code>${escape(course.videoFile)}</code></p></div>
       <div><span class="pill" data-state>${course.published ? '已发布' : '草稿'}</span>
         <p class="muted">更新于 <time data-updated datetime="${new Date(course.updatedAt).toISOString()}">${localTime.format(course.updatedAt)}</time></p></div>
       <div class="actions row-actions"><a href="/admin/courses/${course.id}/edit">编辑</a>
@@ -169,8 +170,11 @@ function adminForm(course) {
     `<textarea id="${key}" name="${key}" rows="${rows}" ${required ? 'required' : ''} aria-describedby="${key}-error">\n${escape(course?.[key])}</textarea>`);
   return `${crumb('/admin', '返回课程管理')}
   <section class="editor panel">
-    <h1>${course ? '编辑课程' : '新建课程'}</h1>
-    <form id="course-form" method="post" data-id="${course?.id ?? ''}" data-video="${escape(course?.videoFile)}" novalidate>
+    <header class="split">
+      <h1>${course ? '编辑课程' : '新建课程'}</h1>
+      ${course?.published ? `<a href="/courses/${course.id}">公开详情</a>` : ''}
+    </header>
+    <form id="course-form" method="post" data-id="${course?.id ?? ''}" novalidate>
       ${textField('title', '标题')}
       ${textarea('summary', '简介', 3, true)}
       ${textarea('description', '课程介绍', 7, false)}

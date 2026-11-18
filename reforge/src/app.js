@@ -6,7 +6,8 @@ import { extname } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { findCourse, listCourses, numericId, serializeCourse, validateCourse, writeCourse } from './courses.js';
-import { canPlay, issuePlayback, listVideos, openLocalFile, openVideo, playbackStatus, serveVideo } from './media.js';
+import { listVideos, openLocalFile, openVideo, serveVideo } from './media.js';
+import { issuePlayback, playbackEligibility, playbackStatus } from './playback.js';
 import { coverSvg, render } from './pages.js';
 import { checkCredentials, currentUser, identifyToken, issueSession, loginLocation, revokeSession, safeNext, sessionCookie } from './session.js';
 
@@ -223,7 +224,7 @@ export function makeHandler({ db, mediaRoot, migrations, stopToken, stop }) {
       const id = numericId(route.parameter);
       switch (route.name) {
         case 'home':
-          return page({ courses: listCourses(db, true) });
+          return page({ courses: listCourses(db) });
         case 'loginPage':
           if (user && url.searchParams.get('switch') !== '1') {
             return redirect(res, 302, safeNext(url.searchParams.get('next')));
@@ -251,12 +252,11 @@ export function makeHandler({ db, mediaRoot, migrations, stopToken, stop }) {
           const course = findCourse(db, id);
           if (!course?.published) return fail(404);
           if (route.name === 'course') return json(req, res, 200, { course: serializeCourse(course) });
-          return page({ courses: listCourses(db, true), eligibility: canPlay(user, course) });
+          return page({ courses: [serializeCourse(course)], eligibility: playbackEligibility(user, id, course) === 200 });
         }
         case 'play': {
-          if (id === null) return fail(404);
-          if (!user) return fail(401);
-          if (!canPlay(user, findCourse(db, id))) return fail(404);
+          const eligibility = playbackEligibility(user, id, user ? findCourse(db, id) : undefined);
+          if (eligibility !== 200) return fail(eligibility);
           return json(req, res, 200, issuePlayback(db, id));
         }
         case 'media': {

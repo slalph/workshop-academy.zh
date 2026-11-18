@@ -1,0 +1,16 @@
+{
+  "name": "local-academy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "migrate": "node src/main.js migrate",
+    "backup": "node src/main.js backup",
+    "restore": "node src/main.js restore",
+    "test": "node --test"
+  }
+}

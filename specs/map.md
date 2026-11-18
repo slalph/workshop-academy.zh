@@ -35,3 +35,8 @@ meta.md       规约的规约
 | [git.md](packages/git.md) | 提交信息格式和 AI 共同作者 trailers |
 | [course-access.md](packages/course-access.md) | 播放地址签发、课程页观看入口与视频读取的观看资格 |
 | [licensing.md](packages/licensing.md) | SPDX 头要求与验证检查 |
+| [catalog.md](packages/catalog.md) | 公开课程目录、详情和封面 |
+| [course-admin.md](packages/course-admin.md) | 课程维护、发布与本地视频选择 |
+| [operations.md](packages/operations.md) | 启停、数据目录、建库、迁移、备份与恢复 |
+| [session.md](packages/session.md) | 登录、会话、换账号和角色权限 |
+| [web.md](packages/web.md) | HTTP 约定、静态资源、错误与站点外壳 |

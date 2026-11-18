@@ -98,7 +98,7 @@
 当操作者运行 `npm run restore -- <备份文件>` 时，命令应在服务停止且数据目录可独占 [[operations-3](#operations-3)] 时从通过检查的快照 [[operations-14](#operations-14)] 恢复：
 
 - 快照路径相对调用命令时的目录解析，拒绝缺失、非文件或当前数据库本身的路径。
-- 当前数据库若存在则先生成恢复前备份 [[operations-15](#operations-15)]，然后用快照原子替换当前数据库文件并清除旧 SQLite 附属日志。
+- 当前数据库若存在则先生成恢复前备份 [[operations-15](#operations-15)]，然后用快照原子替换当前数据库文件并清除旧 SQLite 附属日志。即使当前主数据库已损坏而无法作为 SQLite 打开，也应先按原字节留存该文件，再从完好快照恢复。同一命令若不能留存旧文件，应在替换前退出。
 - 输出恢复结果、数据统计、已有恢复前备份位置及必要的待执行迁移提醒 [[operations-8](#operations-8)]，服务保持停止。
 
 ### operations-14
@@ -146,7 +146,7 @@
 
 ### operations-21
 
-当系统测试在运行中或停止后用操作命令备份和恢复真实数据库时，测试应断言维护令牌校验及停服 [[operations-11](#operations-11)]、备份完整且服务保持停止 [[operations-12](#operations-12)]、恢复条件和前后数据库内容 [[operations-13](#operations-13)]、无效快照在替换前被拒绝 [[operations-14](#operations-14)]，以及命名和防覆盖 [[operations-15](#operations-15)]。
+当系统测试在运行中或停止后用操作命令备份和恢复真实数据库时，测试应断言维护令牌校验及停服 [[operations-11](#operations-11)]、备份完整且服务保持停止 [[operations-12](#operations-12)]、健康和损坏两种当前库的恢复结果、损坏文件的原字节留存和恢复前后课程资料 [[operations-13](#operations-13)]、无效快照在替换前被拒绝 [[operations-14](#operations-14)]，以及命名和防覆盖 [[operations-15](#operations-15)]。
 
 ### operations-22
 

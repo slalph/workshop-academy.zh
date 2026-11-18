@@ -89,6 +89,10 @@
 
 ## 内部行为
 
+### course-access-17
+
+当课程页或直调签发接口检查当前用户能否取得新地址时，两者应使用 `src/playback.js` 中的同一项观看资格检查 [[course-access-1](#course-access-1)]。
+
 ### course-access-12
 
 当学堂签发或核验播放地址时，学堂应使用数据库中持久化的播放密钥 [[operations-6](operations.md#operations-6)] 对十进制课程编号、英文冒号与十进制到期毫秒时间戳拼成的字符串计算 HMAC-SHA256：
@@ -121,3 +125,7 @@
 ### course-access-16
 
 当浏览器系统测试点击“开始观看”时，测试应断言课程页调用签发接口、成功后显示视频并开始播放或提示手动播放，以及失败后恢复按钮和提示正确 [[course-access-15](#course-access-15)]。
+
+### course-access-18
+
+当用登录状态及发布状态矩阵执行双入口集成验证时，测试应核对页面和签发接口的观察结果与两条请求路径共用的资格检查一致 [[course-access-17](#course-access-17)]。

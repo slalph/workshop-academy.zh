@@ -47,7 +47,7 @@ def status(page, url, expected):
 def check_catalog(page, base, evidence):
     status(page, base, 200)
     body = page.locator("body")
-    expect(body).to_contain_text(re.compile(r"1:00|1分(?:钟)?|60\s*秒"))
+    expect(body).to_contain_text(re.compile(r"1:00|1\s*分\s*0\s*秒|1分(?:钟)?|60\s*秒"))
     expect(body).to_contain_text(re.compile(r"3\s*门|已发布课程\s*3"))
     for title in COURSES:
         expect(course_link(page, title)).to_be_visible()

@@ -11,7 +11,7 @@
 
 ### session-1
 
-当客户端向 `POST /api/login` 提交 JSON 对象 [[web-4](web.md#web-4)] 时，学堂应按下表处理凭据：
+当客户端向 `POST /api/login` 提交 JSON 对象 [[request-contract-1](request-contract.md#request-contract-1)] 时，学堂应按下表处理凭据：
 
 | 情形 | 结果 |
 | --- | --- |
@@ -46,7 +46,7 @@
 | 会话身份 | 接口 | 页面 |
 | --- | --- | --- |
 | 访客 | 401 | 302 到登录页，`next` 包含原路径和查询串 [[session-8](#session-8)] |
-| 学员 | 403 | 403，含返回目录和换账号登录的错误页 [[web-6](web.md#web-6)] [[session-8](#session-8)] |
+| 学员 | 403 | 403，允许返回目录或通过换账号登录入口重新取得准入资格 [[session-8](#session-8)] |
 | 管理员 | 执行请求 | 展示请求页面 |
 
 ### session-8
@@ -56,7 +56,7 @@
 | 情形 | 结果 |
 | --- | --- |
 | 已登录且 `switch` 不等于 `1` | 302 到安全的返回地址 |
-| 访客或 `switch=1` | 200，显示用户名、密码和示例账号入口 [[operations-6](operations.md#operations-6)]，已登录时说明当前身份和会话替换 |
+| 访客或 `switch=1` | 200，显示用户名、密码和示例账号入口 [[demo-data-1](demo-data.md#demo-data-1)]，已登录时说明当前身份和会话替换 |
 
 ### session-9
 
@@ -66,13 +66,13 @@
 
 当用户在登录表单手动提交或选择示例账号时，登录页应通过登录接口 [[session-1](#session-1)] 提交凭据并在成功后转到安全返回地址 [[session-9](#session-9)]：
 
-- 选择示例账号时自动填入示例用户名和密码再提交 [[operations-6](operations.md#operations-6)]。
+- 选择示例账号时自动填入示例用户名和密码再提交 [[demo-data-1](demo-data.md#demo-data-1)]。
 - 缺少凭据或返回字段错误时在对应字段展示消息并聚焦首个出错字段。
 - 凭据不匹配时提示失败并聚焦密码字段。
 
 ### session-11
 
-当已登录用户点击站点顶栏的退出按钮 [[web-7](web.md#web-7)] 时，页面应调用退出接口 [[session-6](#session-6)] 并在成功后回到目录，在失败时显示错误并允许重试。
+当已登录用户点击站点顶栏的退出按钮时，页面应调用退出接口 [[session-6](#session-6)] 并在成功后回到目录，在失败时显示错误并允许重试。
 
 ## 内部行为
 

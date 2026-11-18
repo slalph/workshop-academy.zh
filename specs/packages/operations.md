@@ -41,18 +41,7 @@
 
 ### operations-6
 
-如果数据库从未填入示例数据，当学堂完成启动前的迁移检查 [[operations-4](#operations-4)] 后，学堂应原子初始化本地示例：
-
-- 创建 `admin`（王教务、管理员）、`student`（李小明、学员）、`student2`（陈小红、学员），示例密码均为 `123456`，创建后可通过登录接口使用这些账号 [[session-1](session.md#session-1)]。
-- 生成随机播放签名密钥并持久化初始化完成标记。
-- 依次创建四门示例课程，前三门发布，末门为草稿：
-
-| 课程 | 视频 | 时长（秒） |
-| --- | --- | --- |
-| Python 入门：写出第一个程序 | `python-basics.mp4` | 18 |
-| 用 Git 管好每一次修改 | `git-essentials.mp4` | 20 |
-| Web 接口设计与测试 | `web-api-testing.mp4` | 22 |
-| SQLite 数据建模实践 | `sqlite-modeling.mp4` | 16 |
+如果库中没有初始化完成标记，当启动流程开始初始化时，学堂应在同一事务内写入三个示例账号 [[demo-data-1](demo-data.md#demo-data-1)]、四门示例课程 [[demo-data-2](demo-data.md#demo-data-2)]、该库的播放签名密钥 [[demo-data-3](demo-data.md#demo-data-3)] 和完成标记。
 
 ### operations-7
 
@@ -60,15 +49,11 @@
 
 ### operations-8
 
-当学堂检查迁移状态时，学堂应读取 `migrations/` 下以 `.sql` 结尾的文件并按文件名排序，校验文件格式、编号和历史：
-
-- 文件名形如 `001-init.sql`，编号至少三位且唯一，短名由小写字母、数字和连字符构成且以字母或数字开始。
-- 已执行文件的名称和 SHA-256 校验和须匹配记录。
-- 新文件须追加在已执行文件之后；删除、改名、修改已执行文件或将新文件排在历史之前均作为冲突。
+当学堂检查数据库版本时，学堂应以项目 `migrations/` 目录与数据库历史的比较结果 [[migration-history-1](migration-history.md#migration-history-1)] 报告已执行和待执行文件，或报告冲突。
 
 ### operations-9
 
-当学堂应用迁移时，学堂应只对检查无冲突 [[operations-8](#operations-8)] 的待执行文件按文件名顺序逐一运行，并使文件更改及其名称、校验和、执行时间的记录在同一 SQLite 事务内提交；某文件失败则回滚该文件、保留先前已成功文件并停止后续执行。
+当学堂应用项目迁移时，学堂应将当前数据库和项目迁移目录交给迁移执行器，采用其逐文件提交、遇错停止的结果 [[migration-history-2](migration-history.md#migration-history-2)]。
 
 ### operations-10
 
@@ -96,11 +81,11 @@
 
 ### operations-14
 
-当维护命令验证备份来源或恢复快照时，维护命令应要求 SQLite 快速完整性检查仅返回 `ok`，且库中存在 `schema_migrations`、`settings`、`users`、`courses`。
+当维护命令验收备份来源或恢复快照时，命令应按同一 SQLite 完整性与必需表规则取得统计 [[snapshots-1](snapshots.md#snapshots-1)]，检查失败则中止操作。
 
 ### operations-15
 
-当维护命令创建备份文件时，命令应使用 `academy` 或 `before-restore` 前缀，非默认数据目录附加目录名标签，随后加本地 `YYYYMMDD-HHMMSS` 时间和 `.sqlite` 后缀，遇到重名时通过编号使用新文件名且任何情况下不得覆盖旧备份。
+当维护命令保存数据库备份时，命令应在配置的备份目录 [[operations-2](#operations-2)] 以 `academy` 标识普通备份、以 `before-restore` 标识恢复前备份，按目录标签与时间命名并保留已有副本 [[snapshots-2](snapshots.md#snapshots-2)]。
 
 ### operations-16
 
@@ -108,7 +93,7 @@
 
 ### operations-17
 
-当操作者为示例环境生成素材时，`scripts/make-media.sh` 应借助 ffmpeg 的 libx264 与 Python Pillow 生成四个示例课程所用的本地 MP4 [[operations-6](#operations-6)]。
+当操作者为示例环境生成素材时，`scripts/make-media.sh` 应借助 ffmpeg 的 libx264 与 Python Pillow 生成示例课程清单中的四个本地 MP4 [[demo-data-2](demo-data.md#demo-data-2)]。
 
 ### operations-23
 
@@ -124,18 +109,18 @@
 
 当学堂持久化本地数据时，学堂应使用开启外键约束的 SQLite 保存设置、账号、会话、课程和迁移历史：
 
-- 账号以整数主键关联会话，用户名唯一，角色仅为管理员或学员，删除账号时级联删除会话 [[session-2](session.md#session-2)] [[session-4](session.md#session-4)]。
-- 课程以整数主键标识，难度取公开枚举 [[catalog-3](catalog.md#catalog-3)]，时长非负，发布状态为二值 [[course-admin-7](course-admin.md#course-admin-7)]，使用毫秒时间戳保存创建与更新时间 [[course-admin-5](course-admin.md#course-admin-5)] [[course-admin-6](course-admin.md#course-admin-6)]。
+- 账号以整数主键关联会话，用户名唯一，角色仅为管理员或学员，删除账号时级联删除会话。
+- 课程以整数主键标识，按课程记录约束保存难度、时长、发布状态与创建和更新时间 [[course-record-1](course-record.md#course-record-1)]。
 
 ## 验证
 
 ### operations-19
 
-当系统测试以独立临时数据目录执行启动、并行启动、正常退出和异常退出后的重启时，测试应断言运行环境和监听设置 [[operations-1](#operations-1)]、文件位置 [[operations-2](#operations-2)]、占用互斥与过期记录清理 [[operations-3](#operations-3)]、不同数据库状态的启动结果 [[operations-4](#operations-4)]、正常退出关闭数据库并释放记录 [[operations-5](#operations-5)]、示例内容只初始化一次 [[operations-6](#operations-6)]、成功启动的输出 [[operations-16](#operations-16)]，以及失败命令的输出与退出状态 [[operations-23](#operations-23)]。
+当系统测试以独立临时数据目录执行启动、并行启动、正常退出和异常退出后的重启时，测试应断言运行环境和监听设置 [[operations-1](#operations-1)]、文件位置 [[operations-2](#operations-2)]、占用互斥与过期记录清理 [[operations-3](#operations-3)]、不同数据库状态的启动结果 [[operations-4](#operations-4)]、正常退出关闭数据库并释放记录 [[operations-5](#operations-5)]、重启保留已经初始化的示例 [[operations-6](#operations-6)]、成功启动的输出 [[operations-16](#operations-16)]，以及失败命令的输出与退出状态 [[operations-23](#operations-23)]。
 
 ### operations-20
 
-当系统测试在真实数据库中添加迁移、修改历史文件或在迁移中途触发失败时，测试应断言健康检查报告 [[operations-7](#operations-7)]、文件与历史约束 [[operations-8](#operations-8)]、每文件原子性及保留旧数据 [[operations-9](#operations-9)]、服务运行时禁止迁移且停服后可执行 [[operations-10](#operations-10)]、SQLite 保存和约束生效 [[operations-18](#operations-18)]，以及新增更大编号迁移能在保留已有数据的同时演进结构 [[operations-24](#operations-24)]。
+当系统测试在真实数据库中添加迁移、修改历史文件或在迁移中途触发失败时，测试应断言健康检查报告 [[operations-7](#operations-7)]、文件与历史约束 [[operations-8](#operations-8)]、每文件原子性及保留旧数据 [[operations-9](#operations-9)]、服务运行时禁止迁移且停服后可执行 [[operations-10](#operations-10)]，以及新增更大编号迁移能在保留已有数据的同时演进结构 [[operations-24](#operations-24)]。
 
 ### operations-21
 
@@ -144,3 +129,11 @@
 ### operations-22
 
 当系统测试用生成脚本准备示例素材后启动学堂时，测试应断言四个生成的视频均为可读的 MP4 且对应示例课程 [[operations-17](#operations-17)]。
+
+### operations-25
+
+当集成测试在学堂创建的数据库中写入、重开并删除记录时，测试应核对设置、账号、会话、课程和迁移历史的持久化，验证整数主键、账号唯一性、角色限制、会话外键与级联删除，并核对课程难度、非负时长、二值发布状态和毫秒时间戳 [[operations-18](#operations-18)]。
+
+### operations-26
+
+当系统测试分别启动未初始化、有初始化写入冲突和已初始化的数据库时，测试应断言首次成功写入账号、课程、密钥和完成标记，中途失败时四者均无部分写入，成功后重启保持用户修改并保留原标记 [[operations-6](#operations-6)]。

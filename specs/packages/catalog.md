@@ -11,11 +11,11 @@
 
 ### catalog-1
 
-当客户端打开 `GET /api/courses` 时，学堂应返回 200 和 `{"courses":[...]}`，包含按编号升序排列的所有已发布课程 [[catalog-3](#catalog-3)]。
+当客户端打开 `GET /api/courses` 时，学堂应返回 200 和 `{"courses":[...]}`，包含按编号升序排列的所有公开可见的已发布课程 [[course-record-2](course-record.md#course-record-2)] [[catalog-3](#catalog-3)]。
 
 ### catalog-2
 
-当客户端打开 `GET /api/courses/:id` 或 `/courses/:id` 时，学堂应仅为编号有效 [[web-5](web.md#web-5)] 的已发布课程返回 200 和相应课程详情：
+当客户端打开 `GET /api/courses/:id` 或 `/courses/:id` 时，学堂应仅为编号有效 [[request-contract-2](request-contract.md#request-contract-2)] 且公开可见 [[course-record-2](course-record.md#course-record-2)] 的已发布课程返回 200 和相应课程详情：
 
 | 路径 | 详情 |
 | --- | --- |
@@ -26,7 +26,7 @@
 
 ### catalog-3
 
-当学堂序列化公开课程时，学堂应返回以下公开字段：
+当学堂序列化公开课程时，学堂应按课程资料及链接的定义 [[course-record-1](course-record.md#course-record-1)] 返回以下公开字段：
 
 - `id`、`title`、`summary`、`description`、`instructor`、`durationSeconds`、布尔值 `published`、毫秒时间戳 `updatedAt`。
 - `level` 和 `levelLabel` 分别为 `beginner` / 入门、`intermediate` / 进阶或 `advanced` / 高级。
@@ -50,7 +50,7 @@
 
 ### catalog-6
 
-当客户端打开 `GET /covers/:id.svg` 时，学堂应为任意有效正整数编号 [[web-5](web.md#web-5)] 提供由编号确定的像素风格 SVG，以 `image/svg+xml` 响应并允许公开缓存 3600 秒。
+当客户端打开 `GET /covers/:id.svg` 时，学堂应为任意有效正整数编号 [[request-contract-2](request-contract.md#request-contract-2)] 提供由编号确定的像素风格 SVG，以 `image/svg+xml` 响应并允许公开缓存 3600 秒。
 
 ## 验证
 

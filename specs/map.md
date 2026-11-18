@@ -30,13 +30,18 @@ meta.md       规约的规约
 
 ## 规约包
 
-| 文件 | 摘要 |
+| 文件 | 到这里查什么 |
 | --- | --- |
-| [git.md](packages/git.md) | 提交信息格式和 AI 共同作者 trailers |
-| [course-access.md](packages/course-access.md) | 播放地址签发、课程页观看入口与视频读取的观看资格 |
-| [licensing.md](packages/licensing.md) | SPDX 头要求与验证检查 |
-| [catalog.md](packages/catalog.md) | 公开课程目录、详情和封面 |
-| [course-admin.md](packages/course-admin.md) | 课程维护、发布与本地视频选择 |
-| [operations.md](packages/operations.md) | 启停、数据目录、建库、迁移、备份与恢复 |
-| [session.md](packages/session.md) | 登录、会话、换账号和角色权限 |
-| [web.md](packages/web.md) | HTTP 约定、静态资源、错误与站点外壳 |
+| [catalog.md](packages/catalog.md) | 访客浏览目录、课程详情及封面 |
+| [course-admin.md](packages/course-admin.md) | 管理员维护课程、选择视频与发布课程 |
+| [course-access.md](packages/course-access.md) | 签发播放地址、展示入口、媒体读取和续播 |
+| [course-record.md](packages/course-record.md) | 课程记录的共同字段、公开可见性与视频关联 |
+| [session.md](packages/session.md) | 登录、换账号、会话及角色准入 |
+| [web.md](packages/web.md) | HTTP 响应、静态资源、错误表示和站点导航 |
+| [request-contract.md](packages/request-contract.md) | 通用 JSON 对象、资源编号与 GET/HEAD 读取约定 |
+| [operations.md](packages/operations.md) | 本机服务和维护命令的入口与结果 |
+| [demo-data.md](packages/demo-data.md) | 首次初始化提供的示例身份、课程与签名密钥 |
+| [migration-history.md](packages/migration-history.md) | 校验迁移历史及逐文件事务执行 |
+| [snapshots.md](packages/snapshots.md) | 检查数据库快照和保存唯一的备份副本 |
+| [git.md](packages/git.md) | 提交信息和 AI 共同作者署名 |
+| [licensing.md](packages/licensing.md) | SPDX 许可头的适用范围与检查 |

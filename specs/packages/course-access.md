@@ -12,7 +12,7 @@
 
 ### course-access-1
 
-当客户端以 `POST /api/courses/:id/play` 请求课程的新播放地址时，学堂应按有效会话 [[session-4](session.md#session-4)]、有效课程编号 [[web-5](web.md#web-5)] 和公开详情的发布状态 [[catalog-2](catalog.md#catalog-2)] 决定是否签发地址：
+当客户端以 `POST /api/courses/:id/play` 请求课程的新播放地址时，学堂应先检查课程编号 [[request-contract-2](request-contract.md#request-contract-2)]，再按观看资格 [[course-access-17](#course-access-17)] 决定是否签发地址：
 
 | 状态 | 结果 |
 | --- | --- |
@@ -25,7 +25,7 @@
 
 ### course-access-2
 
-当浏览器打开已发布课程的详情页 [[catalog-2](catalog.md#catalog-2)] 时，学堂应按签发播放地址的同一资格判定展示观看入口 [[course-access-1](#course-access-1)]：
+当浏览器打开公开可见的已发布课程详情页 [[course-record-2](course-record.md#course-record-2)] 时，学堂应按同一观看资格判定 [[course-access-17](#course-access-17)] 展示观看入口：
 
 | 状态 | 观看入口 |
 | --- | --- |
@@ -36,7 +36,7 @@
 
 ### course-access-3
 
-给定播放地址由学堂签发且尚未到期，当客户端以 `GET` 或 `HEAD` 读取该地址时，学堂应读取其课程当前关联的视频 [[course-admin-3](course-admin.md#course-admin-3)]，无需登录会话且课程取消发布不影响地址在有效期内的使用：
+给定播放地址由学堂签发且尚未到期，当客户端以 `GET` 或 `HEAD` 读取该地址时，学堂应按课程当前关联的文件名读取视频 [[course-record-4](course-record.md#course-record-4)]，无需登录会话且课程取消发布不影响地址在有效期内的使用：
 
 - 课程或视频文件缺失、文件名无效或路径未指向普通文件时返回 404。
 - 视频存在时按字节服务规则响应 [[course-access-13](#course-access-13)]。
@@ -47,7 +47,7 @@
 
 | 情形 | 结果 |
 | --- | --- |
-| 课程编号无效 [[web-5](web.md#web-5)] | 返回 404 |
+| 课程编号无效 [[request-contract-2](request-contract.md#request-contract-2)] | 返回 404 |
 | 课程编号有效，签名、到期时间或课程编号被改动，或缺少签名 | 返回 403 |
 | 播放地址已到期 | 返回 410 |
 
@@ -70,7 +70,7 @@
 | 起点超出文件或请求 0 字节后缀 | 416，返回 `Content-Range: bytes */<文件大小>` |
 
 - 成功响应包含 `Content-Type: video/mp4`、`Accept-Ranges: bytes` 及相应的 `Content-Length`。
-- `HEAD` 只返回与 `GET` 对应的状态和响应头 [[web-9](web.md#web-9)]。
+- `HEAD` 只返回与 `GET` 对应的状态和响应头 [[request-contract-3](request-contract.md#request-contract-3)]。
 
 ### course-access-14
 
@@ -87,11 +87,18 @@
 - 成功后显示带播放控件的视频并尝试播放，浏览器阻止自动播放时提示用户手动开始。
 - 失败时恢复按钮、展示错误并允许重试，会话失效时引导回登录页 [[session-8](session.md#session-8)]。
 
+### course-access-17
+
+给定有效课程编号，当学堂判断当前请求者能否开始观看时，课程页和签发入口应使用同一判定：
+
+- 无有效会话 [[session-4](session.md#session-4)] 时，判定为需要登录。
+- 已登录时，仅当课程存在且当前发布状态允许新授权 [[course-record-2](course-record.md#course-record-2)] 才允许观看，其余判定为课程不可用。
+
 ## 内部行为
 
 ### course-access-12
 
-当学堂签发或核验播放地址时，学堂应使用数据库中持久化的播放密钥 [[operations-6](operations.md#operations-6)] 对十进制课程编号、英文冒号与十进制到期毫秒时间戳拼成的字符串计算 HMAC-SHA256：
+当学堂签发或核验播放地址时，学堂应使用数据库中持久化的播放密钥 [[demo-data-3](demo-data.md#demo-data-3)] 对十进制课程编号、英文冒号与十进制到期毫秒时间戳拼成的字符串计算 HMAC-SHA256：
 
 - URL 形如 `/media/:id?expires=<毫秒时间戳>&signature=<64 位小写十六进制签名>`，接收的时间戳包含 1 至 15 个十进制数字。
 - 先校验签名，再将时间戳不晚于当前时间的地址判定为到期。
@@ -121,3 +128,7 @@
 ### course-access-16
 
 当浏览器系统测试点击“开始观看”时，测试应断言课程页调用签发接口、成功后显示视频并开始播放或提示手动播放，以及失败后恢复按钮和提示正确 [[course-access-15](#course-access-15)]。
+
+### course-access-18
+
+当集成测试以访客和已登录用户分别打开同一门已发布课程并直接请求授权时，应核对页面入口与实际签发结果对两种身份的资格判定一致，并在取消发布后核对已登录用户也无法再取得新地址 [[course-access-17](#course-access-17)]。

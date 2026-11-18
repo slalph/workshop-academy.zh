@@ -19,11 +19,11 @@
 
 ### course-admin-3
 
-当学堂在管理接口序列化课程时，学堂应在公开字段 [[catalog-3](catalog.md#catalog-3)] 之外提供 `videoFile` 和毫秒时间戳 `createdAt`。
+当学堂在管理接口序列化课程时，学堂应返回课程资料与链接 [[course-record-1](course-record.md#course-record-1)]（`id`、`title`、`summary`、`description`、`instructor`、`level`、`levelLabel`、`durationSeconds`、`published`、`updatedAt`、`url`、`coverUrl`），并附上当前关联的 `videoFile` [[course-record-4](course-record.md#course-record-4)] 和创建时间戳 `createdAt`。
 
 ### course-admin-4
 
-当管理员请求 `GET /api/admin/courses/:id` 时，学堂应对有效编号 [[web-5](web.md#web-5)] 对应的任意既存课程返回 200 和 `{"course": {...}}` [[course-admin-3](#course-admin-3)]，其余返回 404。
+当管理员请求 `GET /api/admin/courses/:id` 时，学堂应对有效编号 [[request-contract-2](request-contract.md#request-contract-2)] 对应的任意既存课程返回 200 和 `{"course": {...}}` [[course-admin-3](#course-admin-3)]，其余返回 404。
 
 ### course-admin-5
 
@@ -35,25 +35,17 @@
 
 ### course-admin-7
 
-当学堂校验课程写入的 JSON 对象 [[web-4](web.md#web-4)] 时，学堂应按操作及字段规则验证可写数据：
+当学堂校验课程写入的 JSON 对象 [[request-contract-1](request-contract.md#request-contract-1)] 时，学堂应按操作及字段规则验证可写数据：
 
-| 字段 | 新建默认值或必填 | 校验与整理 |
-| --- | --- | --- |
-| `title` | 必填 | 非空字符串，最多 80 个 Unicode 码点 |
-| `summary` | 必填 | 非空字符串，最多 200 个 Unicode 码点 |
-| `description` | 空字符串 | 可为空的字符串，最多 5000 个 Unicode 码点 |
-| `instructor` | 必填 | 非空字符串，最多 40 个 Unicode 码点 |
-| `level` | 必填 | `beginner`、`intermediate` 或 `advanced` |
-| `videoFile` | 必填 | 视频清单中存在的文件名 [[course-admin-8](#course-admin-8)]，以该视频的秒数作为课程时长，时长未知时存为 0 |
-| `published` | `false`（草稿） | 布尔值 |
-
-- 文本中的 CRLF 和 CR 转为 LF，并去除两端空白后校验。
+- 新建时必填 `title`、`summary`、`instructor`、`level` 和 `videoFile`，未提供的 `description` 和 `published` 分别取空字符串和 `false`。
+- 文本按字段整理并校验长度 [[course-record-5](course-record.md#course-record-5)]，`level` 仅接受三种难度代码，`published` 仅接受布尔值 [[course-record-1](course-record.md#course-record-1)]。
+- `videoFile` 仅接受可选素材的文件名，并用所选视频更新课程时长 [[course-record-4](course-record.md#course-record-4)]。
 - 修改时仅校验出现的字段，空对象返回 400。
 - 出现未知字段时返回 400，已知字段的校验错误以 400 和逐字段中文 `fields` 返回。
 
 ### course-admin-8
 
-当管理员请求 `GET /api/admin/videos` 时，学堂应返回 200 和 `{"videos":[...]}`，按文件名升序列出 `media/` 中名称匹配 `^[a-z0-9][a-z0-9-]{0,80}\.mp4$` 的条目：
+当管理员请求 `GET /api/admin/videos` 时，学堂应返回 200 和 `{"videos":[...]}`，按文件名升序列出本地可选素材 [[course-record-3](course-record.md#course-record-3)]：
 
 - 每项含文件名 `file`、大小 `sizeBytes`、按 MP4 头部总时长四舍五入到整数秒后的 `durationSeconds`。
 - 无法解析时长时使用 `null`，目录不存在时返回空列表。
@@ -66,7 +58,7 @@
 
 当管理员在管理列表切换发布状态时，页面应提交对应的发布状态修改 [[course-admin-6](#course-admin-6)]，按接口返回更新该课程行和统计，并显示结果消息：
 
-- 成功时更新徽标、按钮、更新时间和公开浏览入口 [[catalog-2](catalog.md#catalog-2)]，并说明对目录 [[catalog-1](catalog.md#catalog-1)] 和新播放授权 [[course-access-1](course-access.md#course-access-1)] 的影响。
+- 成功时更新徽标、按钮、更新时间和公开浏览入口 [[catalog-2](catalog.md#catalog-2)]，并说明发布或取消发布对目录可见性及新播放授权的影响 [[course-record-2](course-record.md#course-record-2)]。
 - 失败时保持课程行状态并显示错误。
 
 ### course-admin-11

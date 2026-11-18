@@ -23,25 +23,18 @@
 
 ### web-4
 
-当学堂读取 JSON 对象请求体时，学堂应按以下情形解析请求体：
-
-| 情形 | 结果 |
-| --- | --- |
-| 声明或实际字节数超过 65536 | 413 |
-| 空请求体或仅含空白 | 按空对象处理 |
-| 非空且不是按 UTF-8 解码后的合法 JSON 对象 | 400，包括 JSON 值为数组、标量或 `null` |
-| 合法 JSON 对象 | 将对象传递给业务操作 |
+当学堂将请求体交给业务操作时，HTTP 入口应按对象解析结果 [[request-contract-1](request-contract.md#request-contract-1)] 分派：有效对象（含空对象）交给操作，超长返回 413，格式无效返回 400。
 
 ### web-5
 
-当学堂解析资源路径中的编号时，学堂应仅接受无前导零的十进制正安全整数，遇到无效编号时返回 404。
+当学堂解析资源路径中的编号时，路由应将有效编号交给资源操作 [[request-contract-2](request-contract.md#request-contract-2)]，遇到无效编号时统一返回 404。
 
 ### web-6
 
 当学堂处理请求错误时，学堂应按路径选择错误表示：
 
 - `/api/`、`/internal/` 和 `/media/` 下使用 UTF-8 JSON，对象含中文 `error`，若有字段错误则另含 `fields`。
-- 其他路径使用带站点外壳 [[web-7](#web-7)] 的 UTF-8 HTML，展示状态说明与返回目录的链接，401 或 403 时另有登录或切换账号入口 [[session-8](session.md#session-8)]。
+- 其他路径使用带站点外壳 [[web-7](#web-7)] 的 UTF-8 HTML，展示状态说明与返回目录的链接，并按身份拒绝的结果 [[session-7](session.md#session-7)] 在 401 或 403 时另给登录或切换账号入口 [[session-8](session.md#session-8)]。
 - 未注册路径返回 404；未预期的服务端错误返回 500 和通用中文消息。
 
 ### web-7
@@ -57,7 +50,7 @@
 
 ### web-9
 
-当客户端访问已注册的 HTTP 路径时，学堂应允许该路由声明的方法，将 `HEAD` 视为无响应体的 `GET`，并对未声明方法返回 405 和 `Allow` 响应头。
+当客户端访问已注册的 HTTP 路径时，学堂应允许该路由声明的方法，按读取契约接受对应的无响应体 `HEAD` [[request-contract-3](request-contract.md#request-contract-3)]，并对未声明方法返回 405 和 `Allow` 响应头。
 
 ### web-10
 

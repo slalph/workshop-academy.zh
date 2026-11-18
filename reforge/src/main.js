@@ -3,7 +3,7 @@
 
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  closeSync, existsSync, fchmodSync, fstatSync, linkSync, mkdirSync, openSync,
+  closeSync, copyFileSync, existsSync, fchmodSync, fstatSync, linkSync, mkdirSync, openSync,
   readFileSync, readdirSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync,
 } from 'node:fs';
 import { createServer } from 'node:http';
@@ -324,13 +324,13 @@ function localTimestamp() {
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 }
 
-async function newBackup(db, prefix) {
+async function newBackup(prefix, writeSnapshot) {
   mkdirSync(backups, { recursive: true });
   const temporary = join(backups, `.backup-${randomUUID()}.tmp`);
   const label = data === defaultData ? '' : `-${basename(data)}`;
   const stem = `${prefix}${label}-${localTimestamp()}`;
   try {
-    await sqliteBackup(db, temporary);
+    await writeSnapshot(temporary);
     for (let number = 0; ; number++) {
       const path = join(backups, `${stem}${number ? `-${number}` : ''}.sqlite`);
       try {
@@ -376,7 +376,7 @@ async function backup() {
     if (!existsSync(database)) throw new Error(`数据库不存在：${database}`);
     db = openDatabase(database, true);
     const summary = stats(db);
-    const path = await newBackup(db, 'academy');
+    const path = await newBackup('academy', path => sqliteBackup(db, path));
     console.log(`已备份：${path}\n${summary}\n重启命令：DATA_DIR=${quoteShell(data)} PORT=${port} npm start`);
   } finally {
     try {
@@ -384,6 +384,22 @@ async function backup() {
     } finally {
       ownership.release();
     }
+  }
+}
+
+async function backUpBeforeRestore() {
+  let current;
+  try {
+    try {
+      // Inspect without writing so a damaged database can be saved byte for byte.
+      current = openDatabase(database, true);
+      stats(current);
+    } catch {
+      return await newBackup('before-restore', path => copyFileSync(database, path));
+    }
+    return await newBackup('before-restore', path => sqliteBackup(current, path));
+  } finally {
+    current?.close();
   }
 }
 
@@ -395,7 +411,6 @@ async function restore(argument) {
   const ownership = occupy({ task: 'restore' });
   const temporary = join(data, `.restore-${randomUUID()}.tmp`);
   let snapshot;
-  let current;
   try {
     const sourceStat = statSync(source);
     const currentStat = existsSync(database) ? statSync(database) : null;
@@ -414,17 +429,8 @@ async function restore(argument) {
     } catch (error) {
       reminder = `\n启动前请解决迁移问题：${error.message}`;
     }
-    let safetyBackup;
     await sqliteBackup(snapshot, temporary);
-    if (currentStat) {
-      current = openDatabase(database);
-      stats(current);
-      safetyBackup = await newBackup(current, 'before-restore');
-      const checkpoint = current.prepare('PRAGMA wal_checkpoint(TRUNCATE)').get();
-      if (checkpoint.busy) throw new Error('无法清理当前数据库的 WAL 日志');
-      current.close();
-      current = undefined;
-    }
+    const safetyBackup = currentStat ? await backUpBeforeRestore() : undefined;
     for (const suffix of ['-wal', '-shm', '-journal']) {
       const sidecar = database + suffix;
       if (existsSync(sidecar)) unlinkSync(sidecar);
@@ -433,7 +439,6 @@ async function restore(argument) {
     console.log(`已恢复：${source} → ${database}\n${summary}${safetyBackup ? `\n恢复前备份：${safetyBackup}` : ''}${reminder}`);
   } finally {
     try {
-      current?.close();
       snapshot?.close();
       if (existsSync(temporary)) unlinkSync(temporary);
     } finally {

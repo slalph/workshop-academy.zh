@@ -369,6 +369,39 @@ test('operations-21：维护令牌、备份锁定与恢复真实数据库', asyn
   for (const suffix of ['-wal', '-shm', '-journal']) assert.equal(existsSync(local.dbPath + suffix), false);
 });
 
+test('operations-21：恢复损坏的数据库并逐字节留存原文件', async t => {
+  const local = fixture(t);
+  const running = await local.start();
+  await local.command(['run', 'backup']);
+  await running.exited;
+  const [file] = readdirSync(local.backupDir);
+  const snapshot = join(local.backupDir, file);
+  const courses = path => local.inspect(db => db.prepare('SELECT * FROM courses ORDER BY id').all(), path);
+  const expected = courses(snapshot);
+
+  const damaged = Buffer.concat([Buffer.from('损坏的数据库'), Buffer.from([0, 255, 128])]);
+  writeFileSync(local.dbPath, damaged);
+  for (const suffix of ['-wal', '-shm', '-journal']) writeFileSync(local.dbPath + suffix, '旧日志');
+
+  const blocked = join(local.cwd, 'blocked-backups');
+  writeFileSync(blocked, '不是目录');
+  await assert.rejects(local.command(['run', 'restore', '--', snapshot], { BACKUP_DIR: blocked }), failure(/blocked-backups/));
+  assert.deepEqual(readFileSync(local.dbPath), damaged);
+  for (const suffix of ['-wal', '-shm', '-journal']) assert.equal(readFileSync(local.dbPath + suffix, 'utf8'), '旧日志');
+  assert.equal(existsSync(local.runPath), false);
+
+  const restored = await local.command(['run', 'restore', '--', snapshot]);
+  const before = readdirSync(local.backupDir).find(name => name.startsWith('before-restore-'));
+  assert.match(before, /^before-restore-local-data-\d{8}-\d{6}\.sqlite$/);
+  const preserved = join(local.backupDir, before);
+  assert.ok(restored.stdout.includes(preserved));
+  assert.match(restored.stdout, /账号 3，课程 4，迁移 1/);
+  assert.deepEqual(readFileSync(preserved), damaged);
+  for (const suffix of ['-wal', '-shm', '-journal']) assert.equal(existsSync(local.dbPath + suffix), false);
+  assert.deepEqual(courses(local.dbPath), expected);
+  assert.equal(existsSync(local.runPath), false);
+});
+
 const ffmpegEncoders = spawnSync('ffmpeg', ['-hide_banner', '-encoders'], { encoding: 'utf8' });
 const pillowReady = spawnSync('python3', ['-c', 'from PIL import ImageFont; ImageFont.load_default(size=20)'], { stdio: 'ignore' });
 const mediaToolsReady = ffmpegEncoders.status === 0 && /\blibx264\b/.test(ffmpegEncoders.stdout) && pillowReady.status === 0;

@@ -163,6 +163,20 @@ def verify(instance):
     print(f"恢复：在线拒绝，旧快照读回“{original}”，恢复前快照读回“{later}”")
     instance.stop()
 
+    # 仅改写验收脚本刚在临时目录内创建的测试库。
+    database = instance.data / "academy.sqlite"
+    damaged = b"synthetic unreadable SQLite database"
+    database.write_bytes(damaged)
+    backups_before = set(instance.backups.glob("before-restore-*.sqlite"))
+    instance.command("run", "restore", "--", str(protected[0]))
+    preserved = set(instance.backups.glob("before-restore-*.sqlite")) - backups_before
+    expect(len(preserved) == 1 and next(iter(preserved)).read_bytes() == damaged,
+           "恢复前未逐字节保留损坏的旧库")
+    instance.start()
+    expect(title() == later, "从完好快照恢复后未读回业务数据")
+    instance.stop()
+    print("故障恢复：保留损坏库全部原字节，从完好快照恢复后可登录并读回课程")
+
     directory = instance.project / "migrations"
     prefixes = [m[1] for file in directory.glob("*.sql")
                 if (m := re.match(r"^(\d+)-", file.name))]
